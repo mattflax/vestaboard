@@ -8,8 +8,10 @@ from vestaboard.formatter import Formatter
 
 MAX_WIDTH = 22
 MAX_LINES = 6
+BOARD_NAMES = ['train_board1', 'train_board2', 'co2_board']
+KEY_FILE = 'keys.csv'
+SLEEP_SECS = 15
 
-boards = {}
 
 class Train:
     def __init__(self, input_time, place, co2, arr_or_dep: str):
@@ -26,12 +28,86 @@ class Train:
         return f'{self.displayTime},{self.place},{self.co2}'
 
 
+class BoardRunner:
+    def __init__(self, csv_file):
+        self.csv_file = csv_file
+        boards = init_boards(KEY_FILE)
+        self.train_board1 = boards[BOARD_NAMES[0]]
+        self.train_board2 = boards[BOARD_NAMES[1]]
+        self.co2_board = boards[BOARD_NAMES[2]]
+        self.trains = read_input_file(csv_file)
+        self.num_displayed = 0
+        self.co2_total = 0
+
+    def reset_trains(self):
+        # Re-read trains file
+        self.trains = read_input_file(self.csv_file)
+
+    def run(self):
+        while True:
+            rows = self.get_display_trains()
+            if len(rows) > 0 and len(rows) > self.num_displayed:
+                self.num_displayed = len(rows)
+                self.update_train_boards(rows)
+                self.update_co2(rows)
+            time.sleep(SLEEP_SECS)
+            print('...tick...')
+
+    def get_display_trains(self):
+        time_now = int(time.strftime('%H%M'))
+        rows = []
+        # Get all trains up to "now"
+        for train in self.trains:
+            if train.displayTime <= time_now:
+                rows.append(train)
+            else:
+                break
+        return rows
+
+    def update_train_boards(self, rows):
+        self.num_displayed = len(rows)
+        # Reverse the order
+        rows.reverse()
+        # Most recent two go to top board
+        update_train_board(self.train_board1, rows[0:2])
+        # Next most recent go to middle, if they exist
+        if len(rows) > 2:
+            update_train_board(self.train_board2, rows[2:4])
+        else:
+            reset_board(self.train_board2)
+
+    def update_co2(self, rows):
+        co2 = 0
+        for row in rows:
+            co2 += row.co2
+        if co2 != self.co2_total:
+            total_co2 = co2
+            update_co2_board(self.co2_board, total_co2)
+
+
 def init_boards(key_file):
+    boards = {}
     with open(key_file) as keys:
         csv_reader = csv.reader(keys)
-        for row in csv_reader:
+        for i, row in enumerate(csv_reader):
             installable = vestaboard.Installable(apiKey=row[1], apiSecret=row[2], saveCredentials=False)
-            boards[row[0]] = vestaboard.Board(installable)
+            boards[BOARD_NAMES[i]] = vestaboard.Board(installable)
+    return boards
+
+
+def read_input_file(file):
+    rows = []
+    with open(file) as csv_file:
+        input_reader = csv.reader(csv_file)
+        for row in input_reader:
+            if len(row) >= 3:
+                try:
+                    arr_time = int(row[0])
+                    co2 = int(row[2])
+                    rows.append(Train(arr_time, row[1], co2, row[3]))
+                except ValueError:
+                    continue
+    return sorted(rows, key=lambda a: a.displayTime)
 
 
 def format_arrival(time, place, co2kg):
@@ -69,58 +145,13 @@ def update_co2_board(board: vestaboard.Board, co2_count):
     board.raw(content)
 
 
-def read_input_file(file):
-    rows = []
-    with open(file) as csv_file:
-        input_reader = csv.reader(csv_file)
-        for row in input_reader:
-            if len(row) >= 3:
-                try:
-                    arr_time = int(row[0])
-                    co2 = int(row[2])
-                    rows.append(Train(arr_time, row[1], co2, row[3]))
-                except ValueError:
-                    continue
-    return sorted(rows, key=lambda a: a.displayTime)
-
-
 def main(args):
     if len(args) < 1:
         usage()
         sys.exit(1)
 
-    init_boards('keys.csv')
-    trains = read_input_file(args[0])
-    total_co2 = 0
-    num_arrived = 0
-    while True:
-        time_now = int(time.strftime('%H%M'))
-        rows = []
-        # Get all arrivals up to "now"
-        for train in trains:
-            if train.displayTime <= time_now:
-                rows.append(train)
-            else:
-                break
-        if len(rows) > 0 and len(rows) > num_arrived:
-            num_arrived = len(rows)
-            # Reverse the order
-            rows.reverse()
-            # Most recent two go to top board
-            update_train_board(boards['train_board1'], rows[0:2])
-            # Next most recent go to middle, if they exist
-            if len(rows) > 2:
-                update_train_board(boards['train_board2'], rows[2:4])
-            else:
-                reset_board(boards['train_board2'])
-            co2 = 0
-            for row in rows:
-                co2 += row.co2
-            if co2 != total_co2:
-                total_co2 = co2
-                update_co2_board(boards['co2_board'], total_co2)
-        time.sleep(15)
-        print('...tick...')
+    board_runner = BoardRunner(args[0])
+    board_runner.run()
 
 
 def usage():
