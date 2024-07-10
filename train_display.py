@@ -35,21 +35,21 @@ class BoardRunner:
         self.train_board1 = boards[BOARD_NAMES[0]]
         self.train_board2 = boards[BOARD_NAMES[1]]
         self.co2_board = boards[BOARD_NAMES[2]]
-        self.trains = read_input_file(csv_file)
+        self.all_trains = read_input_file(csv_file)
         self.num_displayed = 0
         self.co2_total = 0
 
     def reset_trains(self):
         # Re-read trains file
-        self.trains = read_input_file(self.csv_file)
+        self.all_trains = read_input_file(self.csv_file)
 
     def run(self):
         while True:
-            rows = self.get_display_trains()
-            if len(rows) > 0 and len(rows) > self.num_displayed:
-                self.num_displayed = len(rows)
-                self.update_train_boards(rows)
-                self.update_co2(rows)
+            past_trains = self.get_display_trains()
+            if len(past_trains) > 0 and len(past_trains) > self.num_displayed:
+                self.num_displayed = len(past_trains)
+                self.update_train_boards(past_trains)
+                self.update_co2(past_trains)
             time.sleep(SLEEP_SECS)
             print('...tick...')
 
@@ -57,29 +57,29 @@ class BoardRunner:
         time_now = int(time.strftime('%H%M'))
         rows = []
         # Get all trains up to "now"
-        for train in self.trains:
+        for train in self.all_trains:
             if train.displayTime <= time_now:
                 rows.append(train)
             else:
                 break
         return rows
 
-    def update_train_boards(self, rows):
-        self.num_displayed = len(rows)
-        # Reverse the order
-        rows.reverse()
+    def update_train_boards(self, trains):
+        self.num_displayed = len(trains)
+        # Reverse the order - most recent train first
+        trains.reverse()
         # Most recent two go to top board
-        update_train_board(self.train_board1, rows[0:2])
+        update_train_board(self.train_board1, trains[0:2])
         # Next most recent go to middle, if they exist
-        if len(rows) > 2:
-            update_train_board(self.train_board2, rows[2:4])
+        if len(trains) > 2:
+            update_train_board(self.train_board2, trains[2:4])
         else:
             reset_board(self.train_board2)
 
-    def update_co2(self, rows):
+    def update_co2(self, trains):
         co2 = 0
-        for row in rows:
-            co2 += row.co2
+        for trains in trains:
+            co2 += trains.co2
         if co2 != self.co2_total:
             total_co2 = co2
             update_co2_board(self.co2_board, total_co2)
