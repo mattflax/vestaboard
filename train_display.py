@@ -3,6 +3,7 @@
 import csv
 import sys
 import time
+from graphics import Graphic, Images
 from vestaboard import Board, Installable
 from vestaboard.formatter import Formatter
 
@@ -11,6 +12,8 @@ MAX_LINES = 6
 BOARD_NAMES = ['train_board1', 'train_board2', 'co2_board']
 KEY_FILE = 'keys.csv'
 SLEEP_SECS = 15
+GRAPHIC_DISPLAY_SECS = 30
+MIN_GRAPHIC_INTERVAL_MINS = 5
 
 
 class Train:
@@ -39,6 +42,14 @@ class BoardRunner:
         self.all_trains = read_input_file(csv_file)
         self.num_displayed = 0
         self.co2_total = 0
+        self.disabled = False
+        self.graphic_idx = 0
+        self.last_graphic_display_time = int(time.strftime('%H%M'))
+
+    def disable(self):
+        self.disabled = True
+        for board in [self.train_board1, self.train_board2, self.co2_board]:
+            reset_board(board)
 
     def reset_trains(self):
         # Re-read trains file
@@ -46,13 +57,30 @@ class BoardRunner:
 
     def run(self):
         while True:
-            past_trains = self.get_display_trains()
-            if len(past_trains) > 0 and len(past_trains) > self.num_displayed:
-                self.num_displayed = len(past_trains)
-                self.update_train_boards(past_trains)
-                self.update_co2(past_trains)
-            time.sleep(SLEEP_SECS)
-            print('...tick...')
+            if self.should_display_graphic():
+                self.show_current_graphic()
+                time.sleep(GRAPHIC_DISPLAY_SECS)
+            else:
+                past_trains = self.get_display_trains()
+                if len(past_trains) > 0 and len(past_trains) > self.num_displayed:
+                    self.num_displayed = len(past_trains)
+                    self.update_train_boards(past_trains)
+                    self.update_co2(past_trains)
+                time.sleep(SLEEP_SECS)
+                print('...tick...')
+
+    def should_display_graphic(self):
+        time_now = int(time.strftime('%H%M'))
+        if (time_now - self.last_graphic_display_time > MIN_GRAPHIC_INTERVAL_MINS) and (time_now % 5 == 0):
+            self.last_graphic_display_time = time_now
+            return True
+        return False
+
+    def show_current_graphic(self):
+        display_graphic(Images[self.graphic_idx], self.train_board1, self.train_board2, self.co2_board, self.co2_total)
+        self.graphic_idx += 1
+        if self.graphic_idx > len(Images):
+            self.graphic_idx = 0
 
     def get_display_trains(self):
         time_now = int(time.strftime('%H%M'))
@@ -140,6 +168,20 @@ def update_co2_board(board: Board, co2_count):
     content = [line1, line2, line3, line4]
     # Update board content
     board.raw(content, pad='center')
+
+
+def display_graphic(graphic: Graphic, board1: Board, board2: Board, co2_board: Board, co2kg):
+    board1.raw(graphic.board1_content)
+    board2.raw(graphic.board2_content)
+    co2_board.raw(format_graphic_text(graphic.text_lines, co2kg), pad='center')
+
+
+def format_graphic_text(lines, co2kg):
+    co2_content = []
+    for line in lines:
+        co2_content.append(Formatter().convertLine(line))
+    co2_content.append(Formatter().convertLine(f'{co2kg}'))
+    return co2_content
 
 
 def main(args):
