@@ -3,7 +3,7 @@
 import csv
 import sys
 import time
-import vestaboard
+from vestaboard import Board, Installable
 from vestaboard.formatter import Formatter
 
 MAX_WIDTH = 22
@@ -15,8 +15,9 @@ SLEEP_SECS = 15
 
 class Train:
     def __init__(self, input_time, place, co2, arr_or_dep: str):
-        self.displayTime = input_time
+        self.intTime = input_time
         self.actualTime = time.strptime(f'{input_time}', '%H%M')
+        self.displayTime = f'{self.actualTime[3]:02}:{self.actualTime[4]:02}'
         self.place = place
         self.co2 = co2
         self.arrival = arr_or_dep.lower().startswith('a')
@@ -58,7 +59,7 @@ class BoardRunner:
         rows = []
         # Get all trains up to "now"
         for train in self.all_trains:
-            if train.displayTime <= time_now:
+            if train.intTime <= time_now:
                 rows.append(train)
             else:
                 break
@@ -68,11 +69,11 @@ class BoardRunner:
         self.num_displayed = len(trains)
         # Reverse the order - most recent train first
         trains.reverse()
-        # Most recent two go to top board
-        update_train_board(self.train_board1, trains[0:2])
+        # Most recent three go to top board
+        update_train_board(self.train_board1, trains[0:3])
         # Next most recent go to middle, if they exist
-        if len(trains) > 2:
-            update_train_board(self.train_board2, trains[2:4])
+        if len(trains) > 3:
+            update_train_board(self.train_board2, trains[3:6])
         else:
             reset_board(self.train_board2)
 
@@ -90,8 +91,9 @@ def init_boards(key_file):
     with open(key_file) as keys:
         csv_reader = csv.reader(keys)
         for i, row in enumerate(csv_reader):
-            installable = vestaboard.Installable(apiKey=row[1], apiSecret=row[2], saveCredentials=False)
-            boards[BOARD_NAMES[i]] = vestaboard.Board(installable)
+            boards[BOARD_NAMES[i]] = Board(localApi={'ip': row[3], 'key': row[4], 'saveToken': False})
+            # installable = Installable(apiKey=row[1], apiSecret=row[2], saveCredentials=False)
+            # boards[BOARD_NAMES[i]] = Board(installable)
     return boards
 
 
@@ -107,42 +109,37 @@ def read_input_file(file):
                     rows.append(Train(arr_time, row[1], co2, row[3]))
                 except ValueError:
                     continue
-    return sorted(rows, key=lambda a: a.displayTime)
+    return sorted(rows, key=lambda a: a.intTime)
 
 
-def format_arrival(time, place, co2kg):
-    text = f'{{66}} The {time:04} from {place} saved {co2kg}kg CO2 pp'
-    print(f'Arrival: {text}')
-    return Formatter().convertPlainText(text=text, justify='left', align='top', size=[3, 22])
+def format_train(display_time, place, co2kg):
+    line1 = Formatter().convertLine(f'{display_time}-{place}', justify='left')
+    line2 = Formatter().convertLine(f'CO2 saved-{co2kg}', justify='right')
+    return [line1, line2]
 
 
-def format_departure(time, place, co2kg):
-    text = f'{{66}} The {time:04} to {place} will save {co2kg}kg CO2 pp'
-    print(f'Departure: {text}')
-    return Formatter().convertPlainText(text=text, justify='left', align='top', size=[3, 22])
-
-
-def reset_board(board: vestaboard.Board):
+def reset_board(board: Board):
     board.post('')
 
 
-def update_train_board(board: vestaboard.Board, trains):
+def update_train_board(board: Board, trains):
     content = []
     for train in trains:
-        if train.arrival:
-            content += format_arrival(train.displayTime, train.place, train.co2)
-        else:
-            content += format_departure(train.displayTime, train.place, train.co2)
+        content += format_train(train.displayTime, train.place, train.co2)
+    # Update board content
+    board.raw(content, pad='bottom')
+
+
+def update_co2_board(board: Board, co2_count):
+    # text = f'Since the start of the day, travelling by train has saved {co2_count}kg of CO2 emissions'
+    # print(f'CO2 Board: {text}')
+    line1 = Formatter().convertLine('Total CO2 saved in')
+    line2 = Formatter().convertLine('comparison to')
+    line3 = Formatter().convertLine('car & plane')
+    line4 = Formatter().convertLine(f'{co2_count}')
+    content = [line1, line2, line3, line4]
     # Update board content
     board.raw(content, pad='center')
-
-
-def update_co2_board(board: vestaboard.Board, co2_count):
-    text = f'Since the start of the day, travelling by train has saved {co2_count}kg of CO2 emissions'
-    print(f'CO2 Board: {text}')
-    content = Formatter().convertPlainText(text=text)
-    # Update board content
-    board.raw(content)
 
 
 def main(args):
