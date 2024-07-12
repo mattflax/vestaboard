@@ -45,6 +45,7 @@ class BoardRunner:
         self.disabled = False
         self.graphic_idx = 0
         self.last_graphic_display_time = int(time.strftime('%H%M'))
+        self.showing_graphic = False
 
     def disable(self):
         self.disabled = True
@@ -57,29 +58,32 @@ class BoardRunner:
 
     def run(self):
         while True:
-            if self.should_display_graphic():
+            if self.should_display_graphic() and not self.showing_graphic:
                 self.show_current_graphic()
                 time.sleep(GRAPHIC_DISPLAY_SECS)
             else:
                 past_trains = self.get_display_trains()
-                if len(past_trains) > 0 and len(past_trains) > self.num_displayed:
+                if self.showing_graphic or (len(past_trains) > 0 and len(past_trains) > self.num_displayed):
                     self.num_displayed = len(past_trains)
                     self.update_train_boards(past_trains)
                     self.update_co2(past_trains)
+                    self.showing_graphic = False
                 time.sleep(SLEEP_SECS)
                 print('...tick...')
 
     def should_display_graphic(self):
         time_now = int(time.strftime('%H%M'))
-        if (time_now - self.last_graphic_display_time > MIN_GRAPHIC_INTERVAL_MINS) and (time_now % 5 == 0):
+        if (time_now - self.last_graphic_display_time > MIN_GRAPHIC_INTERVAL_MINS) and (
+                time_now % MIN_GRAPHIC_INTERVAL_MINS == 0):
             self.last_graphic_display_time = time_now
             return True
         return False
 
     def show_current_graphic(self):
         display_graphic(Images[self.graphic_idx], self.train_board1, self.train_board2, self.co2_board, self.co2_total)
+        self.showing_graphic = True
         self.graphic_idx += 1
-        if self.graphic_idx > len(Images):
+        if self.graphic_idx >= len(Images):
             self.graphic_idx = 0
 
     def get_display_trains(self):
@@ -110,8 +114,8 @@ class BoardRunner:
         for trains in trains:
             co2 += trains.co2
         if co2 != self.co2_total:
-            total_co2 = co2
-            update_co2_board(self.co2_board, total_co2)
+            self.co2_total = co2
+        update_co2_board(self.co2_board, self.co2_total)
 
 
 def init_boards(key_file):
@@ -173,14 +177,14 @@ def update_co2_board(board: Board, co2_count):
 def display_graphic(graphic: Graphic, board1: Board, board2: Board, co2_board: Board, co2kg):
     board1.raw(graphic.board1_content)
     board2.raw(graphic.board2_content)
-    co2_board.raw(format_graphic_text(graphic.text_lines, co2kg), pad='center')
+    co2_board.raw(format_graphic_text(graphic.text_lines, co2kg * graphic.multiplier), pad='center')
 
 
-def format_graphic_text(lines, co2kg):
+def format_graphic_text(lines, metric):
     co2_content = []
     for line in lines:
         co2_content.append(Formatter().convertLine(line))
-    co2_content.append(Formatter().convertLine(f'{co2kg}'))
+    co2_content.append(Formatter().convertLine(f'{metric:.1f}'))
     return co2_content
 
 
