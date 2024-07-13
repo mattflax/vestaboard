@@ -52,24 +52,24 @@ class BoardRunner:
         for board in [self.train_board1, self.train_board2, self.co2_board]:
             reset_board(board)
 
+    def enable(self):
+        self.disabled = False
+        self.display_trains(force=True)
+
     def reset_trains(self):
         # Re-read trains file
         self.all_trains = read_input_file(self.csv_file)
 
     def run(self):
         while True:
-            if self.should_display_graphic() and not self.showing_graphic:
-                self.show_current_graphic()
-                time.sleep(GRAPHIC_DISPLAY_SECS)
-            else:
-                past_trains = self.get_display_trains()
-                if self.showing_graphic or (len(past_trains) > 0 and len(past_trains) > self.num_displayed):
-                    self.num_displayed = len(past_trains)
-                    self.update_train_boards(past_trains)
-                    self.update_co2(past_trains)
-                    self.showing_graphic = False
-                time.sleep(SLEEP_SECS)
-                print('...tick...')
+            if not self.disabled:
+                if self.should_display_graphic() and not self.showing_graphic:
+                    self.show_current_graphic()
+                    time.sleep(GRAPHIC_DISPLAY_SECS)
+                else:
+                    self.display_trains()
+                    time.sleep(SLEEP_SECS)
+                    print('...tick...')
 
     def should_display_graphic(self):
         time_now = int(time.strftime('%H%M'))
@@ -85,6 +85,14 @@ class BoardRunner:
         self.graphic_idx += 1
         if self.graphic_idx >= len(Images):
             self.graphic_idx = 0
+
+    def display_trains(self, force=False):
+        past_trains = self.get_display_trains()
+        if force or self.showing_graphic or (len(past_trains) > 0 and len(past_trains) > self.num_displayed):
+            self.num_displayed = len(past_trains)
+            self.update_train_boards(past_trains)
+            self.update_co2(past_trains)
+            self.showing_graphic = False
 
     def get_display_trains(self):
         time_now = int(time.strftime('%H%M'))
@@ -158,6 +166,8 @@ def update_train_board(board: Board, trains):
     content = []
     for train in trains:
         content += format_train(train.displayTime, train.place, train.co2)
+    while len(content) < MAX_LINES:
+        content.append(Formatter().convertLine(''))
     # Update board content
     board.raw(content, pad='bottom')
 
@@ -168,7 +178,7 @@ def update_co2_board(board: Board, co2_count):
     line1 = Formatter().convertLine('Total CO2 saved in')
     line2 = Formatter().convertLine('comparison to')
     line3 = Formatter().convertLine('car & plane')
-    line4 = Formatter().convertLine(f'{co2_count}')
+    line4 = Formatter().convertLine(f'{co2_count:,}')
     content = [line1, line2, line3, line4]
     # Update board content
     board.raw(content, pad='center')
@@ -184,7 +194,7 @@ def format_graphic_text(lines, metric):
     co2_content = []
     for line in lines:
         co2_content.append(Formatter().convertLine(line))
-    co2_content.append(Formatter().convertLine(f'{metric:.1f}'))
+    co2_content.append(Formatter().convertLine(f'{metric:,.1f}'))
     return co2_content
 
 
