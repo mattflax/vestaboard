@@ -1,11 +1,15 @@
-#!/home/matt/work/wmsh/vestaboard/venv/bin/python
+#!/home/matt/work/wmsh/vestaboard/.venv/bin/python
 
 import csv
 import sys
 import time
-from graphics import Graphic, Images
-from vestaboard import Board, Installable
+from threading import Thread
+
+from flask import Flask, render_template, redirect
+from vestaboard import Board
 from vestaboard.formatter import Formatter
+
+from graphics import Graphic, Images
 
 MAX_WIDTH = 22
 MAX_LINES = 6
@@ -14,6 +18,8 @@ KEY_FILE = 'keys.csv'
 SLEEP_SECS = 15
 GRAPHIC_DISPLAY_SECS = 30
 MIN_GRAPHIC_INTERVAL_MINS = 5
+
+app = Flask(__name__)
 
 
 class Train:
@@ -33,19 +39,25 @@ class Train:
 
 
 class BoardRunner:
-    def __init__(self, csv_file):
-        self.csv_file = csv_file
+
+    csv_file = None
+    all_trains = []
+    num_displayed = 0
+    co2_total = 0
+    disabled = False
+    graphic_idx = 0
+    last_graphic_display_time = int(time.strftime('%H%M'))
+    showing_graphic = False
+
+    def __init__(self):
         boards = init_boards(KEY_FILE)
         self.train_board1 = boards[BOARD_NAMES[0]]
         self.train_board2 = boards[BOARD_NAMES[1]]
         self.co2_board = boards[BOARD_NAMES[2]]
-        self.all_trains = read_input_file(csv_file)
-        self.num_displayed = 0
-        self.co2_total = 0
-        self.disabled = False
-        self.graphic_idx = 0
-        self.last_graphic_display_time = int(time.strftime('%H%M'))
-        self.showing_graphic = False
+
+    def initialise_trains(self, csv_file):
+        self.csv_file = csv_file
+        self.all_trains = read_input_file(self.csv_file)
 
     def disable(self):
         self.disabled = True
@@ -59,10 +71,13 @@ class BoardRunner:
     def reset_trains(self):
         # Re-read trains file
         self.all_trains = read_input_file(self.csv_file)
+        self.display_trains(force=True)
 
     def run(self):
         while True:
-            if not self.disabled:
+            if self.disabled:
+                time.sleep(SLEEP_SECS)
+            else:
                 if self.should_display_graphic() and not self.showing_graphic:
                     self.show_current_graphic()
                     time.sleep(GRAPHIC_DISPLAY_SECS)
@@ -178,7 +193,7 @@ def update_co2_board(board: Board, co2_count):
     line1 = Formatter().convertLine('Total CO2 saved in')
     line2 = Formatter().convertLine('comparison to')
     line3 = Formatter().convertLine('car & plane')
-    line4 = Formatter().convertLine(f'{co2_count:,}')
+    line4 = Formatter().convertLine(f'{co2_count:,}kg')
     content = [line1, line2, line3, line4]
     # Update board content
     board.raw(content, pad='center')
@@ -198,13 +213,45 @@ def format_graphic_text(lines, metric):
     return co2_content
 
 
+@app.route("/start")
+def start():
+    board_runner.enable()
+    return redirect('/')
+
+
+@app.route("/stop")
+def stop():
+    board_runner.disable()
+    return redirect('/')
+
+
+@app.route("/reload")
+def reload():
+    board_runner.reset_trains()
+    return redirect('/')
+
+
+@app.route("/")
+def index():
+    return render_template('index.html', active=(not board_runner.disabled))
+
+
+board_runner = BoardRunner()
+
+
 def main(args):
     if len(args) < 1:
         usage()
         sys.exit(1)
 
-    board_runner = BoardRunner(args[0])
-    board_runner.run()
+    # Start the board running
+    board_runner.initialise_trains(args[0])
+    board_thread = Thread(target=board_runner.run)
+    print('Starting board thread')
+    board_thread.start()
+    print('Board thread running')
+    # And start the web app
+    app.run(host='0.0.0.0', port=5000)
 
 
 def usage():

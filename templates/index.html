@@ -1,0 +1,20 @@
+<!doctype html>
+<title>Vestaboard Control Screen</title>
+
+<div>
+    {% if active %}
+        <form action="/stop">
+            <button type="submit">Stop boards</button>
+        </form>
+    {% else %}
+        <form action="/start">
+            <button type="submit">Start boards</button>
+        </form>
+    {% endif %}
+</div>
+
+<div>
+    <form action="/reload">
+        <button type="submit">Reload train list</button>
+    </form>
+</div>
