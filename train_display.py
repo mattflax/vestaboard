@@ -39,7 +39,6 @@ class Train:
 
 
 class BoardRunner:
-
     csv_file = None
     all_trains = []
     num_displayed = 0
@@ -48,6 +47,7 @@ class BoardRunner:
     graphic_idx = 0
     last_graphic_display_time = int(time.strftime('%H%M'))
     showing_graphic = False
+    running = True
 
     def __init__(self):
         boards = init_boards(KEY_FILE)
@@ -74,7 +74,7 @@ class BoardRunner:
         self.display_trains(force=True)
 
     def run(self):
-        while True:
+        while self.running:
             if self.disabled:
                 time.sleep(SLEEP_SECS)
             else:
@@ -169,7 +169,7 @@ def read_input_file(file):
 
 def format_train(display_time, place, co2kg):
     line1 = Formatter().convertLine(f'{display_time}-{place}', justify='left')
-    line2 = Formatter().convertLine(f'CO2 saved-{co2kg}', justify='right')
+    line2 = Formatter().convertLine(f'CO2 saved-{co2kg}kg', justify='right')
     return [line1, line2]
 
 
