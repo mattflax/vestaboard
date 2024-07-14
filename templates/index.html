@@ -1,20 +1,20 @@
 <!doctype html>
 <title>Vestaboard Control Screen</title>
 
-<div>
+<div style="width:fit-content;margin:auto;">
     {% if active %}
         <form action="/stop">
-            <button type="submit">Stop boards</button>
+            <button type="submit" style="color:white; background-color:red; padding:15px; font-size:large; font-weight:bold;">Stop boards</button>
         </form>
     {% else %}
         <form action="/start">
-            <button type="submit">Start boards</button>
+            <button type="submit" style="color:white; background-color:green; padding:15px; font-size:large; font-weight:bold;">Start boards</button>
         </form>
     {% endif %}
 </div>
 
-<div>
+<div style="width:fit-content;margin-left:auto; margin-right:auto; margin-top:20px;">
     <form action="/reload">
-        <button type="submit">Reload train list</button>
+        <button type="submit" style="background-color:orange; padding:15px; font-size:large; font-weight:bold;">Reload train list</button>
     </form>
 </div>
