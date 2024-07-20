@@ -15,7 +15,8 @@ from graphics import Graphic, Images
 MAX_WIDTH = 22
 MAX_LINES = 6
 BOARD_NAMES = ['train_board1', 'train_board2', 'co2_board']
-KEY_FILE = '/home/vestaboard/.config/vestaboard/keys.csv'
+#KEY_FILE = '/home/vestaboard/.config/vestaboard/keys.csv'
+KEY_FILE = 'keys.csv'
 SLEEP_SECS = 15
 GRAPHIC_DISPLAY_SECS = 30
 MIN_GRAPHIC_INTERVAL_MINS = 2
@@ -24,7 +25,7 @@ app = Flask(__name__)
 
 
 class Train:
-    def __init__(self, input_time, place, co2, arr_or_dep: str):
+    def __init__(self, input_time, place, co2, arr_or_dep='D'):
         self.intTime = input_time
         self.actualTime = time.strptime(f'{input_time}', '%H%M')
         self.displayTime = f'{self.actualTime[3]:02}:{self.actualTime[4]:02}'
@@ -161,9 +162,10 @@ def read_input_file(file):
         for row in input_reader:
             if len(row) >= 3:
                 try:
-                    arr_time = int(row[0])
+                    arr_time = int(time.strftime('%H%M', time.strptime(row[0], '%H:%M')))
                     co2 = int(row[2])
-                    rows.append(Train(arr_time, row[1], co2, row[3]))
+                    if co2 > 0:
+                        rows.append(Train(arr_time, row[1], co2))
                 except ValueError:
                     continue
     return sorted(rows, key=lambda a: a.intTime)
@@ -177,7 +179,8 @@ def format_train(display_time, place, co2kg):
 
 def reset_board(board: Board):
     try:
-        board.post('')
+        print('Resetting board')
+        # board.post('')
     except RequestException as e:
         print(f'Caught RequestException resetting content - {e.strerror}')
 
@@ -197,7 +200,7 @@ def update_co2_board(board: Board, co2_count):
     # print(f'CO2 Board: {text}')
     line1 = Formatter().convertLine('Total CO2 saved in')
     line2 = Formatter().convertLine('comparison to')
-    line3 = Formatter().convertLine('car & plane')
+    line3 = Formatter().convertLine('car and plane')
     line4 = Formatter().convertLine(f'{co2_count:,}kg')
     content = [line1, line2, line3, line4]
     # Update board content
@@ -207,12 +210,13 @@ def update_co2_board(board: Board, co2_count):
 def display_graphic(graphic: Graphic, board1: Board, board2: Board, co2_board: Board, co2kg):
     board_raw(board1, graphic.board1_content)
     board_raw(board2, graphic.board2_content)
-    board_raw(co2_board, format_graphic_text(graphic.text_lines, co2kg * graphic.multiplier), pad='center')
+    board_raw(co2_board, format_graphic_text(graphic.text_lines, graphic.convert(co2kg)), pad='center')
 
 
 def board_raw(board: Board, content, pad=None):
     try:
-        board.raw(content, pad=pad)
+        print('posting content')
+        # board.raw(content, pad=pad)
     except RequestException as e:
         print(f'Caught RequestException posting raw - {e.strerror}')
 
@@ -220,8 +224,9 @@ def board_raw(board: Board, content, pad=None):
 def format_graphic_text(lines, metric):
     co2_content = []
     for line in lines:
+        line = line.replace('XXX', metric)
+        print(f'Graphic text line: {line}')
         co2_content.append(Formatter().convertLine(line))
-    co2_content.append(Formatter().convertLine(f'{metric:,.1f}'))
     return co2_content
 
 
