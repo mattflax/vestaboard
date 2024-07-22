@@ -79,7 +79,7 @@ cricket_pitch = Graphic(
         'Total CO2 equivalent', 'to XXX', 'cricket pitches', 'of woodland'
     ],
     (1 / (461.5226 / 1000)),
-    lambda x: format_int(x / (461.5226 / 1000))   # Cricket pitch equivalent to 461.5226 tonnes CO2/hectare woodland
+    lambda x: format_2dp(hectares_woodland(x) * (2.47/4.5076963687))   # Cricket pitch equivalent to 461.5226 tonnes CO2/hectare woodland
 )
 
 football_pitch = Graphic(
@@ -103,7 +103,7 @@ football_pitch = Graphic(
         'Total CO2 equivalent', 'to XXX', 'football pitches', 'of woodland'
     ],
     (1 / (163.8866 / 1000)),
-    lambda x: format_int(x / (163.8866 / 1000))   # Football pitch equivalent to 163.886 tonnes CO2/hectare woodland
+    lambda x: format_2dp(hectares_woodland(x) * (2.47/1.6))   # Football pitch equivalent to 163.886 tonnes CO2/hectare woodland
 )
 
 tyrannosaurus = Graphic(
@@ -174,6 +174,13 @@ elephants = Graphic(
 )
 
 Images = [trees, football_pitch, swimming_pool, nessie, tyrannosaurus, elephants, cricket_pitch]
+
+
+def hectares_woodland(co2kg):
+    # Convert to tonnes
+    # 1 tonne carbon emissions === 3.67 tonnes CO2
+    # 69 tonnes carbon stock per hectare
+    return co2kg / 1000 / 3.67 / 69
 
 
 def format_int(value):
