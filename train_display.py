@@ -1,5 +1,6 @@
 #!/home/vestaboard/vestaboard/.venv/bin/python
 
+import argparse
 import csv
 import sys
 import time
@@ -15,8 +16,8 @@ from graphics import Graphic, Images
 MAX_WIDTH = 22
 MAX_LINES = 6
 BOARD_NAMES = ['train_board1', 'train_board2', 'co2_board']
-#KEY_FILE = '/home/vestaboard/.config/vestaboard/keys.csv'
-KEY_FILE = 'keys.csv'
+KEY_FILE = '/home/vestaboard/.config/vestaboard/keys.csv'
+#KEY_FILE = 'keys.csv'
 SLEEP_SECS = 15
 GRAPHIC_DISPLAY_SECS = 30
 MIN_GRAPHIC_INTERVAL_MINS = 2
@@ -51,8 +52,8 @@ class BoardRunner:
     showing_graphic = False
     running = True
 
-    def __init__(self):
-        boards = init_boards(KEY_FILE)
+    def __init__(self, key_file):
+        boards = init_boards(key_file)
         self.train_board1 = boards[BOARD_NAMES[0]]
         self.train_board2 = boards[BOARD_NAMES[1]]
         self.co2_board = boards[BOARD_NAMES[2]]
@@ -162,7 +163,7 @@ def read_input_file(file):
         for row in input_reader:
             if len(row) >= 3:
                 try:
-                    arr_time = int(time.strftime('%H%M', time.strptime(row[0], '%H:%M')))
+                    arr_time = int(row[0].replace(':', ''))
                     co2 = int(row[2])
                     if co2 > 0:
                         rows.append(Train(arr_time, row[1], co2))
@@ -172,15 +173,20 @@ def read_input_file(file):
 
 
 def format_train(display_time, place, co2kg):
-    line1 = Formatter().convertLine(f'{display_time}-{place}', justify='left')
-    line2 = Formatter().convertLine(f'CO2 saved-{co2kg}kg', justify='right')
-    return [line1, line2]
+    line1 = f'{display_time}-{place}'
+    line2 = f'CO2 saved-{co2kg:,}kg'
+    if test_mode:
+        print(line1)
+        print(line2)
+    return [Formatter().convertLine(line1, justify='left'), Formatter().convertLine(line2, justify='right')]
 
 
 def reset_board(board: Board):
     try:
-        print('Resetting board')
-        # board.post('')
+        if test_mode:
+            print('Resetting board')
+        else:
+            board.post('')
     except RequestException as e:
         print(f'Caught RequestException resetting content - {e.strerror}')
 
@@ -196,8 +202,8 @@ def update_train_board(board: Board, trains):
 
 
 def update_co2_board(board: Board, co2_count):
-    # text = f'Since the start of the day, travelling by train has saved {co2_count}kg of CO2 emissions'
-    # print(f'CO2 Board: {text}')
+    if test_mode:
+        print(f'Updating board3 with CO2 total {co2_count:,}kg')
     line1 = Formatter().convertLine('Total CO2 saved in')
     line2 = Formatter().convertLine('comparison to')
     line3 = Formatter().convertLine('car and plane')
@@ -215,17 +221,19 @@ def display_graphic(graphic: Graphic, board1: Board, board2: Board, co2_board: B
 
 def board_raw(board: Board, content, pad=None):
     try:
-        print('posting content')
-        # board.raw(content, pad=pad)
+        if test_mode:
+            print(f'Posting raw content: {content}')
+        else:
+            board.raw(content, pad=pad)
     except RequestException as e:
         print(f'Caught RequestException posting raw - {e.strerror}')
 
 
 def format_graphic_text(lines, metric):
     co2_content = []
-    for line in lines:
+    for idx, line in enumerate(lines):
         line = line.replace('XXX', metric)
-        print(f'Graphic text line: {line}')
+        print(f'Graphic text {idx}: {line}')
         co2_content.append(Formatter().convertLine(line))
     return co2_content
 
@@ -253,7 +261,9 @@ def index():
     return render_template('index.html', active=(not board_runner.disabled))
 
 
-board_runner = BoardRunner()
+# Globals
+board_runner: BoardRunner = None
+test_mode = False
 
 
 def main(args):
@@ -261,8 +271,20 @@ def main(args):
         usage()
         sys.exit(1)
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('csv_file')
+    parser.add_argument('-t', action='store_true', dest='testing')
+    parser.add_argument('-k', default=KEY_FILE, dest='key_file')
+    parsed_args = parser.parse_args()
+
+    global test_mode
+    test_mode = parsed_args.testing
+
+    # Initialise the board runner
+    global board_runner
+    board_runner = BoardRunner(parsed_args.key_file)
+    board_runner.initialise_trains(parsed_args.csv_file)
     # Start the board running
-    board_runner.initialise_trains(args[0])
     board_thread = Thread(target=board_runner.run)
     print('Starting board thread')
     board_thread.start()
