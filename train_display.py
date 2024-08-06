@@ -43,7 +43,7 @@ class Train:
         return f'{self.displayTime},{self.place},{self.co2}'
 
 
-class BoardRunner:
+class BoardRunner(Thread):
     csv_file = None
     all_trains = []
     num_displayed = 0
@@ -55,6 +55,7 @@ class BoardRunner:
     running = True
 
     def __init__(self, key_file):
+        super().__init__()
         boards = init_boards(key_file)
         self.train_board1 = boards[BOARD_NAMES[0]]
         self.train_board2 = boards[BOARD_NAMES[1]]
@@ -303,9 +304,8 @@ def main(args):
         board_runner = BoardRunner(parsed_args.key_file)
         board_runner.initialise_trains(parsed_args.csv_file)
         # Start the board running
-        board_thread = Thread(target=board_runner.run)
         print('Starting board thread')
-        board_thread.start()
+        board_runner.start()
         print('Board thread running')
         # And start the web app
         app.run(host='0.0.0.0', port=5000)
