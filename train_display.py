@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import signal
 import sys
 import time
 from threading import Thread
@@ -88,6 +89,10 @@ class BoardRunner:
                 else:
                     self.display_trains()
                     time.sleep(TRAIN_DISPLAY_SECS)
+
+    def shutdown(self):
+        print('Shutting down board runner')
+        self.running = False
 
     def should_display_graphic(self):
         time_now = int(time.strftime('%H%M'))
@@ -260,6 +265,15 @@ def index():
     return render_template('index.html', active=(not board_runner.disabled))
 
 
+def terminate(signum, frame):
+    print(f'Caught signal {signum}')
+    raise ServiceExit
+
+class ServiceExit(Exception):
+    """Custom exception to trigger thread termination"""
+    pass
+
+
 # Globals
 board_runner: BoardRunner = None
 test_mode = False
@@ -279,17 +293,27 @@ def main(args):
     global test_mode
     test_mode = parsed_args.testing
 
+    # Initialise the signal handling
+    signal.signal(signal.SIGTERM, terminate)
+    signal.signal(signal.SIGINT, terminate)
+
     # Initialise the board runner
     global board_runner
-    board_runner = BoardRunner(parsed_args.key_file)
-    board_runner.initialise_trains(parsed_args.csv_file)
-    # Start the board running
-    board_thread = Thread(target=board_runner.run)
-    print('Starting board thread')
-    board_thread.start()
-    print('Board thread running')
-    # And start the web app
-    app.run(host='0.0.0.0', port=5000)
+    try:
+        board_runner = BoardRunner(parsed_args.key_file)
+        board_runner.initialise_trains(parsed_args.csv_file)
+        # Start the board running
+        board_thread = Thread(target=board_runner.run)
+        print('Starting board thread')
+        board_thread.start()
+        print('Board thread running')
+        # And start the web app
+        app.run(host='0.0.0.0', port=5000)
+
+        while True:
+            time.sleep(0.5)
+    except ServiceExit:
+        board_runner.shutdown()
 
 
 def usage():
