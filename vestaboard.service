@@ -1,0 +1,15 @@
+[Unit]
+Description=Vestaboard runner service
+After=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=vestaboard
+WorkingDirectory=/home/vestaboard/vestaboard
+ExecStart=.venv/bin/python -u train_display.py /home/vestaboard/trains.csv
+
+[Install]
+WantedBy=multi-user.target
+
