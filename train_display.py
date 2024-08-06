@@ -20,6 +20,7 @@ KEY_FILE = '/home/vestaboard/.config/vestaboard/keys.csv'
 #KEY_FILE = 'keys.csv'
 SLEEP_SECS = 15
 GRAPHIC_DISPLAY_SECS = 30
+TRAIN_DISPLAY_SECS = 30
 MIN_GRAPHIC_INTERVAL_MINS = 2
 
 app = Flask(__name__)
@@ -86,19 +87,17 @@ class BoardRunner:
                     time.sleep(GRAPHIC_DISPLAY_SECS)
                 else:
                     self.display_trains()
-                    time.sleep(SLEEP_SECS)
-                    print('...tick...')
+                    time.sleep(TRAIN_DISPLAY_SECS)
 
     def should_display_graphic(self):
         time_now = int(time.strftime('%H%M'))
-        if (time_now - self.last_graphic_display_time > MIN_GRAPHIC_INTERVAL_MINS) and (
-                time_now % MIN_GRAPHIC_INTERVAL_MINS == 0):
+        if time_now != self.last_graphic_display_time:
             self.last_graphic_display_time = time_now
             return True
         return False
 
     def show_current_graphic(self):
-        print(f'Showing graphic {self.graphic_idx}')
+        print(f'Showing graphic - {Images[self.graphic_idx].name}')
         display_graphic(Images[self.graphic_idx], self.train_board1, self.train_board2, self.co2_board, self.co2_total)
         self.showing_graphic = True
         self.graphic_idx += 1
@@ -290,7 +289,7 @@ def main(args):
     board_thread.start()
     print('Board thread running')
     # And start the web app
-    app.run(host='192.168.0.10', port=5000)
+    app.run(host='0.0.0.0', port=5000)
 
 
 def usage():

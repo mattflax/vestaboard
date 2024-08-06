@@ -1,10 +1,11 @@
 class Graphic:
-    def __init__(self, board1, board2, co2_board, multiplier, formatter):
+    def __init__(self, board1, board2, co2_board, multiplier, formatter, name):
         self.board1_content = board1
         self.board2_content = board2
         self.text_lines = co2_board
         self.multiplier = multiplier
         self.conversion = formatter
+        self.name = name
 
     def convert(self, co2kg):
         return self.conversion(co2kg)
@@ -31,7 +32,8 @@ swimming_pool = Graphic(
         'Total CO2 equivalent', 'to the volume of', 'XXX', 'Olympic swimming pools'
     ],
     (1 / (2500 / 546) / 1000),
-    lambda x: format_int(x / (2500 / 546) / 1000)     # 1 Olympic swimming pool holds 2500/546 tonnes of co2
+    lambda x: format_int(x / (2500 / 546) / 1000),    # 1 Olympic swimming pool holds 2500/546 tonnes of co2
+    'Swimming pools'
 )
 
 nessie = Graphic(
@@ -55,7 +57,8 @@ nessie = Graphic(
         'Total CO2 equivalent', 'to the weight of', 'XXX', 'Loch Ness Monsters'
     ],
     (1 / 300),
-    lambda x: format_int(x / 300)     # Nessie weighs 300kg
+    lambda x: format_int(x / 300),     # Nessie weighs 300kg :-)
+    'Loch Ness monsters'
 )
 
 cricket_pitch = Graphic(
@@ -79,7 +82,8 @@ cricket_pitch = Graphic(
         'Total CO2 equivalent', 'to XXX', 'cricket pitches', 'of woodland'
     ],
     (1 / (461.5226 / 1000)),
-    lambda x: format_2dp(hectares_woodland(x) * (2.47/4.5076963687))   # Cricket pitch equivalent to 461.5226 tonnes CO2/hectare woodland
+    lambda x: format_2dp(hectares_woodland(x) * (2.47/4.5076963687)),   # Cricket pitch equivalent to 461.5226 tonnes CO2/hectare woodland
+    'Cricket pitches'
 )
 
 football_pitch = Graphic(
@@ -103,7 +107,8 @@ football_pitch = Graphic(
         'Total CO2 equivalent', 'to XXX', 'football pitches', 'of woodland'
     ],
     (1 / (163.8866 / 1000)),
-    lambda x: format_2dp(hectares_woodland(x) * (2.47/1.6))   # Football pitch equivalent to 163.886 tonnes CO2/hectare woodland
+    lambda x: format_2dp(hectares_woodland(x) * (2.47/1.6)),   # Football pitch equivalent to 163.886 tonnes CO2/hectare woodland
+    'Football pitches'
 )
 
 tyrannosaurus = Graphic(
@@ -125,7 +130,8 @@ tyrannosaurus = Graphic(
     ],
     ['Total CO2 equivalent', 'to the weight of', 'XXX', 'T-Rexes'],
     (1 / 6000),
-    lambda x: format_int(x / 6000)    # Average T-Rex weight = 6000kg
+    lambda x: format_int(x / 6000),    # Average T-Rex weight = 6000kg
+    'T-Rex'
 )
 
 trees = Graphic(
@@ -147,7 +153,8 @@ trees = Graphic(
     ],
     ['Total CO2 equivalent', 'to', 'XXX trees'],
     0.0038,
-    lambda x: format_int(x * 0.0038)  # 1 tonne CO2 = 38 trees
+    lambda x: format_int(x * 0.0038),  # 1 tonne CO2 = 38 trees
+    'Trees'
 )
 
 elephants = Graphic(
@@ -169,7 +176,8 @@ elephants = Graphic(
     ],
     ['Total CO2 equivalent', 'to the weight of', 'XXX', 'male asian elephants'],
     (1 / 4000),
-    lambda x: format_int(x / 4000)    # 1 male asian elephant weighs 4 tonnes, 4000kg
+    lambda x: format_int(x / 4000),    # 1 male asian elephant weighs 4 tonnes, 4000kg
+    'Elephants'
 )
 
 cows = Graphic(
@@ -182,16 +190,17 @@ cows = Graphic(
         [70, 70, 70, 70, 70, 64, 70, 64, 64, 64, 64, 64, 64, 64, 64, 70, 64, 70, 70, 70, 70, 70]
     ],
     [
-        [70, 70, 70, 70, 70, 70, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 70, 70, 70, 70, 70, 70]
-        [70, 70, 70, 70, 70, 70, 70, 64, 64, 70, 64, 64, 70, 64, 64, 70, 70, 70, 70, 70, 70, 70]
-        [70, 70, 70, 70, 70, 70, 70, 70, 64, 64, 64, 64, 64, 64, 70, 70, 70, 70, 70, 70, 70, 70]
-        [70, 70, 70, 70, 70, 70, 70, 70, 70, 64, 64, 64, 64, 70, 70, 70, 70, 70, 70, 70, 70, 70]
+        [70, 70, 70, 70, 70, 70, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 70, 70, 70, 70, 70, 70],
+        [70, 70, 70, 70, 70, 70, 70, 64, 64, 70, 64, 64, 70, 64, 64, 70, 70, 70, 70, 70, 70, 70],
+        [70, 70, 70, 70, 70, 70, 70, 70, 64, 64, 64, 64, 64, 64, 70, 70, 70, 70, 70, 70, 70, 70],
+        [70, 70, 70, 70, 70, 70, 70, 70, 70, 64, 64, 64, 64, 70, 70, 70, 70, 70, 70, 70, 70, 70],
         [70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70],
         [70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70]
     ],
     ['Total CO2 equivalent', 'to', 'XXX', 'Highland cows'],
     (1 / 450),
-    lambda x: format_int(x / 450)   # 1 highland cow weighs 450kg
+    lambda x: format_int(x / 450),   # 1 highland cow weighs 450kg
+    'Highland cows'
 )
 
 Images = [trees, football_pitch, swimming_pool, nessie, tyrannosaurus, elephants, cows]
