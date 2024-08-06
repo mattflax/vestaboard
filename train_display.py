@@ -18,7 +18,7 @@ MAX_WIDTH = 22
 MAX_LINES = 6
 BOARD_NAMES = ['train_board1', 'train_board2', 'co2_board']
 KEY_FILE = '/home/vestaboard/.config/vestaboard/keys.csv'
-#KEY_FILE = 'keys.csv'
+# KEY_FILE = 'keys.csv'
 SLEEP_SECS = 15
 GRAPHIC_DISPLAY_SECS = 30
 TRAIN_DISPLAY_SECS = 30
@@ -28,13 +28,12 @@ app = Flask(__name__)
 
 
 class Train:
-    def __init__(self, input_time, place, co2, arr_or_dep='D'):
+    def __init__(self, input_time, place, co2):
         self.intTime = input_time
         self.actualTime = time.strptime(f'{input_time}', '%H%M')
         self.displayTime = f'{self.actualTime[3]:02}:{self.actualTime[4]:02}'
         self.place = place
         self.co2 = co2
-        self.arrival = arr_or_dep.lower().startswith('a')
 
     def __str__(self):
         return f'{self.displayTime},{self.place},{self.co2}'
@@ -270,6 +269,7 @@ def terminate(signum, frame):
     print(f'Caught signal {signum}')
     raise ServiceExit
 
+
 class ServiceExit(Exception):
     """Custom exception to trigger thread termination"""
     pass
@@ -318,7 +318,7 @@ def main(args):
 
 def usage():
     print('Usage:')
-    print('  python train_display.py {input.csv}')
+    print('  python train_display.py [-k keyfile.csv] [-t] {input.csv}')
 
 
 if __name__ == '__main__':
