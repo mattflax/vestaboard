@@ -119,9 +119,10 @@ class BoardRunner(Thread):
 
     def get_display_trains(self):
         time_now = int(time.strftime('%H%M'))
+        dow = time.strftime('%A')  # Full dow name: Monday, Tuesday, etc.
         rows = []
         # Get all trains up to "now"
-        for train in self.all_trains:
+        for train in self.all_trains[dow]:
             if train.intTime <= time_now:
                 rows.append(train)
             else:
@@ -161,23 +162,29 @@ def init_boards(key_file):
 
 
 def read_input_file(file):
-    rows = []
+    days = {}
     with open(file) as csv_file:
         input_reader = csv.reader(csv_file)
         for row in input_reader:
             if len(row) >= 3:
                 try:
+                    dow = row[3]
+                    if dow not in days:
+                        days[dow] = []
                     arr_time = int(row[0].replace(':', ''))
                     co2 = int(row[2])
                     if co2 > 0:
-                        rows.append(Train(arr_time, row[1], co2))
+                        days[dow].append(Train(arr_time, row[1], co2))
                 except ValueError:
                     continue
-    return sorted(rows, key=lambda a: a.intTime)
+
+    for day in days.keys():
+        days[day] = sorted(days[day], key=lambda a: a.intTime)
+    return days
 
 
 def format_train(display_time, place, co2kg):
-    line1 = f'{display_time}-{place}'
+    line1 = f'{place}'
     line2 = f'CO2 saved-{co2kg:,}kg'
     if test_mode:
         print(line1)
@@ -237,8 +244,9 @@ def format_graphic_text(lines, metric):
     co2_content = []
     for idx, line in enumerate(lines):
         line = line.replace('XXX', metric)
-        print(f'Graphic text {idx}: {line}')
         co2_content.append(Formatter().convertLine(line))
+        if test_mode:
+            print(f'Graphic text {idx}: {line}')
     return co2_content
 
 

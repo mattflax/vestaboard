@@ -3,3 +3,4 @@ credentials.txt
 keys.csv
 # Virtual Env settings
 .venv
+venv
